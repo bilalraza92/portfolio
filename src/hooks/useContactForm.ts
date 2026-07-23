@@ -15,38 +15,50 @@ const contactSchema = z.object({
 export type ContactFormValues = z.infer<typeof contactSchema>;
 
 export function useContactForm() {
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
 
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
-    defaultValues: { name: "", email: "", subject: "", message: "" },
+    defaultValues: {
+      name: "",
+      email: "",
+      subject: "",
+      message: "",
+    },
   });
 
   const onSubmit = form.handleSubmit(async (data) => {
-  setStatus("loading");
+    setStatus("loading");
 
-  try {
-    const res = await fetch("/api/contact", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
 
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.error || "Failed");
+      if (!res.ok) {
+        const errorData: { error?: string } = await res.json();
+
+        throw new Error(errorData.error ?? "Failed to send message");
+      }
+
+      setStatus("success");
+      form.reset();
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("CONTACT API ERROR:", error.message);
+      } else {
+        console.error("Unknown error:", error);
+      }
+
+      setStatus("error");
     }
-
-    setStatus("success");
-    form.reset();
-
-  } catch (error: any) {
-    console.log("CONTACT API ERROR:", error.message);
-    setStatus("error");
-  }
-});
+  });
 
   return { form, status, onSubmit };
 }
